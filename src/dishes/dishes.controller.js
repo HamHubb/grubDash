@@ -29,7 +29,7 @@ function validatorFor(prop) {
         } else {
             next({
                 status: 400,
-                message: `missing property ${prop}`
+                message: `Dish must include a ${prop}`
             })
         }
     }
@@ -63,6 +63,40 @@ function create(req, res, next) {
     res.status(201).send({ data: newDishObj })
 }
 
+//validate dish exists
+function validateDishExists(req, res, next) {
+    let { id } = req.params;
+    let index = dishes.findIndex(d => d.id === id);
+    //findIndex returns -1 if the index isnt found
+    if (index < 0) {
+        next({
+            status: 404,
+            message: `Dish does not exist: ${id}`
+        })
+    } else {
+        //located and saved in res.locals as res.locals.index
+        res.locals.index = index;
+        next();
+    }
+}
+
+function read(req, res, next){
+    res.send({ data: dishes[res.locals.index] })
+}
+
+function destroy(req, res, next){
+    let { index } = res.locals;
+    dishes.splice(index, 1);
+    res.status(204).send();
+}
+
+function methodNotAllowed(req, res, next) {
+    next({
+        status: 405,
+        message: `method ${req.method} is not allowed on path ${req.originalUrl}`
+    })
+}
+
 module.exports = {
     list,
     create: [
@@ -73,5 +107,8 @@ module.exports = {
         validatorFor('image_url'),
         validateNewDishObj,
         create
-    ]
+    ],
+    read: [validateDishExists, read],
+    destroy: [validateDishExists, destroy],
+    methodNotAllowed 
 }
