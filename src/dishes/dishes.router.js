@@ -10,7 +10,12 @@ router.route('/')
 
 router.route('/:id')
     .get(controller.read)
+    .put(controller.update)
     .delete(controller.destroy)
+    .all(controller.methodNotAllowed)
+
+router.route('/dishes-router/:id')
+    .put(controller.update)
     .all(controller.methodNotAllowed)
 
 module.exports = router;

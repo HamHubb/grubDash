@@ -78,13 +78,24 @@ function validateOrderExists(req, res, next) {
     }
 }
 
+function update(req, res, next) {
+    const { index } = res.locals;
+    const updatedData = req.body.data;
+    const updatedOrder = {
+        ...orders[index],
+        ...updatedData
+    }
+    orders[index] = updatedOrder;
+    res.status(200).send({ data: updatedOrder})
+}
+
 function read(req, res, next) {
     res.send({ data: orders[res.locals.index]})
 }
 
 function destroy(req, res, next) {
     let { index } = res.locals;
-    orders.spice(index, 1);
+    orders.splice(index, 1);
 
 }
 
@@ -102,8 +113,11 @@ module.exports = {
         validatorFor('deliverTo'),
         validatorFor('mobileNumber'),
         validatorFor('status'),
-        validatorFor('dishes')
+        validatorFor('dishes'),
+        validateNewOrderObj,
+        create
     ],
+    update: [validateOrderExists, update],
     read: [validateOrderExists, read],
     destroy: [validateOrderExists, destroy],
     methodNotAllowed

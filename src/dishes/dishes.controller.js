@@ -34,6 +34,16 @@ function validatorFor(prop) {
         }
     }
 }
+function validatePrice(req, res, next){
+    if(Number(req.body.data.price) < 0) {
+            next({
+                status: 400,
+                message: `price`
+            })
+        } else {
+            next();
+        }
+}
 
 function validateNewDishObj(req, res, next) {
     if (dishes.some(d => 
@@ -80,6 +90,26 @@ function validateDishExists(req, res, next) {
     }
 }
 
+function update(req, res, next) {
+    const { index } = res.locals;
+    const updatedData = req.body.data;
+    const { id: dishId } = dishes[index];
+
+    if(updatedData.id && updatedData.id !== dishId) {
+        return next({
+            status: 400, 
+            message: `Data.id !== ${updatedData.id}`
+        })
+    }
+    const updatedDish = {
+        ...dishes[index],
+        ...updatedData
+    }
+    dishes[index] = updatedDish;
+
+    res.status(200).send({ data: updatedDish});
+}
+
 function read(req, res, next){
     res.send({ data: dishes[res.locals.index] })
 }
@@ -104,10 +134,12 @@ module.exports = {
         validatorFor('name'),
         validatorFor('description'),
         validatorFor('price'),
+        validatePrice,
         validatorFor('image_url'),
         validateNewDishObj,
         create
     ],
+    update: [validateDishExists, update],
     read: [validateDishExists, read],
     destroy: [validateDishExists, destroy],
     methodNotAllowed 
