@@ -90,24 +90,55 @@ function validateDishExists(req, res, next) {
     }
 }
 
+function validatesDishIdRoute(req, res, next) {
+    const dishId = req.params.dishId;
+    const {data: {id} = {}} = req.body;
+
+    if (dishId !== id) {
+        next({
+            status: 400,
+            message: `Dish id does not match route id. Dish: ${id}, Route: ${dishId}`
+        })
+    } else {
+        next();
+    }
+}
+
 function update(req, res, next) {
     const { index } = res.locals;
     const updatedData = req.body.data;
     const { id: dishId } = dishes[index];
+    const { price } = updatedData;
 
-    if(updatedData.id && updatedData.id !== dishId) {
+    if (price !== undefined && price < 0) {
         return next({
-            status: 400, 
-            message: `Data.id !== ${updatedData.id}`
-        })
+          status: 400,
+          message: 'Price cannot be less than zero.'
+        });
+      }
+
+    if (!dishId) {
+        return next({
+            status: 404,
+            message: `Dish does not exist: ${dishId}`
+        });
     }
+
+    // if (updatedData.id && updatedData.id !== dishId) {
+    //     return next({
+    //         status: 400,
+    //         message: `Dish id does not match route id. Dish: ${updatedData.id}, Route: ${dishId}`
+    //     });
+    // }
+
     const updatedDish = {
         ...dishes[index],
         ...updatedData
-    }
+    };
+
     dishes[index] = updatedDish;
 
-    res.status(200).send({ data: updatedDish});
+    res.status(200).send({ data: updatedDish });
 }
 
 function read(req, res, next){
@@ -139,7 +170,14 @@ module.exports = {
         validateNewDishObj,
         create
     ],
-    update: [validateDishExists, update],
+    update: [validateDishExists,validatorFor('name'),
+             validatorFor('description'),
+             validatorFor('price'),
+             validatePrice,
+             validatorFor('image_url'),
+             validatesDishIdRoute, 
+             update
+    ],
     read: [validateDishExists, read],
     destroy: [validateDishExists, destroy],
     methodNotAllowed 
