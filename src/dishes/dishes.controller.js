@@ -7,11 +7,12 @@ const dishes = require(path.resolve("src/data/dishes-data"));
 const nextId = require("../utils/nextId");
 
 // TODO: Implement the /dishes handlers needed to make the tests pass
+// List the existing dishes
 function list(req, res, next) {
     res.send({ data: dishes })
 }
 
-function validateBodyDataExists(req, res, next){
+function validateBodyData(req, res, next){
     if (req.body.data) {
         next();
     } else {
@@ -22,6 +23,7 @@ function validateBodyDataExists(req, res, next){
     }
 }
 
+// Validates properties are present w/in data
 function validatorFor(prop) {
     return function (req, res, next) {
         if(req.body.data[prop]) {
@@ -34,8 +36,10 @@ function validatorFor(prop) {
         }
     }
 }
+
+//Validates price's datatype = number && > 0
 function validatePrice(req, res, next){
-    if(Number(req.body.data.price) < 0) {
+    if((req.body.data.price) < 0 || typeof(req.body.data.price ) !== 'number'){
             next({
                 status: 400,
                 message: `price`
@@ -45,6 +49,7 @@ function validatePrice(req, res, next){
         }
 }
 
+//validate dish doesn't already exist
 function validateNewDishObj(req, res, next) {
     if (dishes.some(d => 
         d.name === req.body.data.name &&
@@ -74,83 +79,68 @@ function create(req, res, next) {
 }
 
 //validate dish exists
-function validateDishExists(req, res, next) {
-    let { id } = req.params;
-    let index = dishes.findIndex(d => d.id === id);
-    //findIndex returns -1 if the index isnt found
-    if (index < 0) {
-        next({
-            status: 404,
-            message: `Dish does not exist: ${id}`
-        })
-    } else {
-        //located and saved in res.locals as res.locals.index
-        res.locals.index = index;
-        next();
-    }
-}
+function validateDishExists(req, res, next) { 
+    const { dishId } = req.params;
+  const foundDish = dishes.find((dish) => dish.id === dishId);
+  if (foundDish) {
+    res.locals.dish = foundDish;
+    return next();
+  }
+  return next({
+    status: 404,
+    message: `Dish does not exist: ${dishId}.`,
+  });
+  }
 
-function validatesDishIdRoute(req, res, next) {
-    const dishId = req.params.dishId;
-    const {data: {id} = {}} = req.body;
+// validates route's params matches dishId
+function validatesDishIdRoute(req, res, next) { 
+    const { dishId } = req.params;
+    const { data: { id } = {} } = req.body;
 
-    if (dishId !== id) {
-        next({
-            status: 400,
-            message: `Dish id does not match route id. Dish: ${id}, Route: ${dishId}`
-        })
-    } else {
-        next();
+    if (!id || id === dishId) {
+        return next();
     }
-}
+    return next({
+        status: 400,
+        message: `Dish id does not match route id. Dish: ${id}, Route: ${dishId}`,
+    });
+    
+  }
 
 function update(req, res, next) {
-    const { index } = res.locals;
-    const updatedData = req.body.data;
-    const { id: dishId } = dishes[index];
-    const { price } = updatedData;
+    const { dishId } = req.params;
+    const foundDish = dishes.find((dish) => dish.id === dishId);
+    const { data: { id, name, description, price, image_url } = {} } = req.body;
 
-    if (price !== undefined && price < 0) {
-        return next({
-          status: 400,
-          message: 'Price cannot be less than zero.'
-        });
-      }
-
-    if (!dishId) {
-        return next({
-            status: 404,
-            message: `Dish does not exist: ${dishId}`
-        });
+    if (foundDish) {
+        foundDish.name = name;
+        foundDish.description = description;
+        foundDish.price = price;
+        foundDish.image_url = image_url;
+        res.json({ data: foundDish });
     }
-
-    // if (updatedData.id && updatedData.id !== dishId) {
-    //     return next({
-    //         status: 400,
-    //         message: `Dish id does not match route id. Dish: ${updatedData.id}, Route: ${dishId}`
-    //     });
-    // }
-
-    const updatedDish = {
-        ...dishes[index],
-        ...updatedData
-    };
-
-    dishes[index] = updatedDish;
-
-    res.status(200).send({ data: updatedDish });
 }
 
+// List the dishes based on the id
 function read(req, res, next){
-    res.send({ data: dishes[res.locals.index] })
+    res.send({ data: res.locals.dish })
 }
 
+// Delete the dishes based on the id
 function destroy(req, res, next){
-    let { index } = res.locals;
-    dishes.splice(index, 1);
-    res.status(204).send();
+    const { dishId } = req.params;
+    const index = dishes.indexOf((dish) => dish.id === dishId);
+    if (index < 0) {
+        next({
+            status: 400,
+            message: `Dish's ${dishId} doesn't match dish.id`
+        })
+    } else {
+        dishes.splice(index, 1);
+        res.status(204).send();
+        
+    }
 }
-
 function methodNotAllowed(req, res, next) {
     next({
         status: 405,
@@ -161,7 +151,7 @@ function methodNotAllowed(req, res, next) {
 module.exports = {
     list,
     create: [
-        validateBodyDataExists,
+        validateBodyData,
         validatorFor('name'),
         validatorFor('description'),
         validatorFor('price'),
@@ -170,7 +160,8 @@ module.exports = {
         validateNewDishObj,
         create
     ],
-    update: [validateDishExists,validatorFor('name'),
+    update: [validateDishExists,
+             validatorFor('name'),
              validatorFor('description'),
              validatorFor('price'),
              validatePrice,
