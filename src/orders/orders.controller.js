@@ -76,7 +76,7 @@ function create(req, res) {
 }
 
 
-// Checks that the order id in the body matches the route id
+//validates orderId = req.body.data.id
 function validateOrderIdRoute(req, res, next) {
     const orderId = req.params.orderId;
     const { data: { id } = {} } = req.body;

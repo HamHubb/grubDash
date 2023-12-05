@@ -121,7 +121,7 @@ function update(req, res, next) {
     }
 }
 
-// List the dishes based on the id
+// list the dishes based on the id
 function read(req, res, next){
     res.send({ data: res.locals.dish })
 }
@@ -137,7 +137,7 @@ function destroy(req, res, next){
         })
     } else {
         dishes.splice(index, 1);
-        res.status(204).send();
+        res.sendStatus(204);
         
     }
 }
